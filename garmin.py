@@ -32,6 +32,7 @@ import collections
 import array
 import datetime
 import os
+import os.path
 import struct
 import sys
 import traceback
@@ -152,7 +153,7 @@ class Garmin(EasyAnt):
         
         file_date_time = date_mod.strftime("%Y-%m-%d_%H-%M-%S")
         
-        filename = str.format("{}-{:02x}-{}-{}-{}.fit", fno, ftype, file_date_time, size, totsize)
+        filename = str.format("{}-{:02x}-{}-{}.fit", fno, ftype, file_date_time, size)
         with open(filename, "w") as f:
             filecontent.tofile(f)
         print "Done downloading", filename
@@ -169,8 +170,16 @@ class Garmin(EasyAnt):
                     struct.unpack("<HBBxxxBII", data[i:i+16])
                 date_mod = datetime.datetime.fromtimestamp(mod + 631065600)
                 print fno, "\t", ftype, "\t", flags, "\t", size, "\t", date_mod
-                self.fetch.append((fno, ftype, flags, size, date_mod))
-            
+                # FIXME: is this the place to check if this file should be appended to the fetch list?
+                # how to check if already downloaded? processed flag?
+                file_date_time = date_mod.strftime("%Y-%m-%d_%H-%M-%S")
+                filename = str.format("{}-{:02x}-{}-{}.fit", fno, ftype, file_date_time, size)
+                print "checking if filename: ", filename, " exists ..."
+                if os.path.exists(filename):
+                    print "**NOT append file to fetch list: ", date_mod
+                else:
+                    print "append file to fetch list with date_mod: ", date_mod
+                    self.fetch.append((fno, ftype, flags, size, date_mod))
             self.ant_fs_next(self.fetch[0])
             
         else:
@@ -194,7 +203,7 @@ class Garmin(EasyAnt):
                 
                 self._logger.debug("File done")
                 self._logger.debug("%s, %d", self.fetch[0], len(self.fetchdat))
-                self._logger.debug("%s",  self.fetchdat)
+                #self._logger.debug("%s",  self.fetchdat)
                 
                 self.ant_fs_done(self.fetch[0], self.fetchdat, tot_length)
                 
